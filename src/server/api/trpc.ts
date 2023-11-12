@@ -6,16 +6,10 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import type {
-  SignedInAuthObject,
-  SignedOutAuthObject,
-} from "@clerk/nextjs/api";
-import { TRPCError, initTRPC } from "@trpc/server";
+import { initTRPC } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import superjson from "superjson";
 import { ZodError } from "zod";
-import { getAuth } from "@clerk/nextjs/server";
-
 
 import { db } from "~/server/db";
 
@@ -27,9 +21,7 @@ import { db } from "~/server/db";
  * These allow you to access things when processing a request, like the database, the session, etc.
  */
 
-interface AuthContext {
-  auth: SignedInAuthObject | SignedOutAuthObject;
-}
+type CreateContextOptions = Record<string, never>;
 
 /**
  * This helper generates the "internals" for a tRPC context. If you need to use it, you can export
@@ -41,10 +33,9 @@ interface AuthContext {
  *
  * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
-const createInnerTRPCContext = ({auth}: AuthContext) => {
+const createInnerTRPCContext = (_opts: CreateContextOptions) => {
   return {
     db,
-    auth,
   };
 };
 
@@ -55,10 +46,7 @@ const createInnerTRPCContext = ({auth}: AuthContext) => {
  * @see https://trpc.io/docs/context
  */
 export const createTRPCContext = (_opts: CreateNextContextOptions) => {
-  const auth = getAuth(_opts.req) as SignedInAuthObject | SignedOutAuthObject;
-  return createInnerTRPCContext({
-    auth,
-  });
+  return createInnerTRPCContext({});
 };
 
 /**
@@ -83,18 +71,6 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
   },
 });
 
-const isAuthed = t.middleware(({next, ctx}) => {
-  if (!ctx.auth.userId) {
-    throw new TRPCError({ code: "UNAUTHORIZED"})
-  }
-
-  return next({
-    ctx: {
-      auth: ctx.auth
-    }
-  });
-})
-
 /**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
  *
@@ -117,4 +93,3 @@ export const createTRPCRouter = t.router;
  * are logged in.
  */
 export const publicProcedure = t.procedure;
-export const protectedProcedure = t.procedure.use(isAuthed);

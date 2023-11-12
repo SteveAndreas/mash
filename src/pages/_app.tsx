@@ -9,12 +9,10 @@ import { NavBar } from "~/components/NavBar";
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
-    <div className="text-white">
-      <ClerkProvider {...pageProps}>
-        <NavBar />
-        <Component {...pageProps} />
-      </ClerkProvider>
-    </div>
+    <ClerkProvider {...pageProps}>
+      <NavBar />
+      <Component {...pageProps} />
+    </ClerkProvider>
 )};
 
 export default api.withTRPC(MyApp);
